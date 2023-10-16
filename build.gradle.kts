@@ -6,6 +6,7 @@ val logback_version: String by project
 plugins {
     kotlin("jvm") version "1.9.10"
     id("io.ktor.plugin") version "2.3.5"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.10"
 }
 
 group = "timlohrer.de"
@@ -30,6 +31,10 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jwt-jvm")
     implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("org.mongodb:mongodb-driver-sync:4.3.1")
+    implementation("org.mindrot:jbcrypt:0.4")
+    implementation("io.ktor:ktor-server-content-negotiation:$ktor_version")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
+
     testImplementation("io.ktor:ktor-server-tests-jvm")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }

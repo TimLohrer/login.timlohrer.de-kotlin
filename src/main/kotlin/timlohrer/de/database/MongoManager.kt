@@ -2,8 +2,10 @@ package timlohrer.de.database
 
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
+import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
-import timlohrer.de.Config
+import org.bson.Document
+import timlohrer.de.config.Config
 
 class MongoManager {
     var mongoClient: MongoClient? = null;
@@ -14,8 +16,9 @@ class MongoManager {
         database = mongoClient?.getDatabase("database")
     }
 
-    fun getCollection(collectionName: String): MongoDatabase? {
-        val collection: MongoDatabase? = mongoClient?.getDatabase(collectionName);
+    fun getCollection(collectionName: String): MongoCollection<Document> {
+        val collection: MongoCollection<Document> =
+            database?.getCollection(collectionName) ?: return throw Exception("Failed to get collection $collectionName");
         return collection;
     }
 }
