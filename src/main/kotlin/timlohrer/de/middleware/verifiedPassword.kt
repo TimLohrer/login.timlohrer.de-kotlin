@@ -15,7 +15,10 @@ import timlohrer.de.utils.unauthorizedError
 
 @Serializable
 data class VerifiedPassword(
-    val password: String = ""
+    val id: String = "",
+    val email: String = "",
+    val password: String = "",
+    val token: String = ""
 )
 
 suspend fun verifiedPassword(call: ApplicationCall, mongoManager: MongoManager) {
