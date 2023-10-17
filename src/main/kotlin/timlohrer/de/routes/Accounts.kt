@@ -132,6 +132,10 @@ class Accounts {
                     call, "Account does not exist!"
                 );
 
+            if (!account.twoFactorAuth) {
+                return badRequestError(call, "2fa is not enabled on this account!");
+            }
+
             call.respond(
                 HttpStatusCode.OK,
                 GetTwoFactorAuthResponse(
@@ -142,7 +146,46 @@ class Accounts {
             );
         } catch (e: Exception) {
             println(e);
-            return internalServerError(call, "Error getting account.");
+            return internalServerError(call, "Error setting up 2fa.");
+        }
+    }
+
+    suspend fun TwoFactorAuth(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+        try {
+            val id: String = call.parameters["id"] ?: "";
+
+            PermissionHandler().checkIfRequestUserOwnsResource(call, user, id);
+
+            val userDB = mongoManager.getCollection("users");
+
+            val account: Account =
+                userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
+                    call, "Account does not exist!"
+                );
+
+            if (!account.twoFactorAuth) {
+                userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.set("twoFactorAuth", true));
+
+                return call.respond(
+                    HttpStatusCode.OK,
+                    GetTwoFactorAuthResponse(
+                        true,
+                        account.twoFactorAuthKey,
+                        TwoFactorAuthManager().generateQrCode(account.email, account.twoFactorAuthKey)
+                    )
+                );
+            } else {
+                userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.set("twoFactorAuth", true));
+                userDB.findOneAndUpdate(
+                    Filters.eq("_id", id),
+                    Updates.set("twoFactorAuthKey", TwoFactorAuthManager().generateSecretKey())
+                );
+
+                return call.respond(HttpStatusCode.OK);
+            }
+        } catch (e: Exception) {
+            println(e);
+            return internalServerError(call, "Error managing 2fa settings.");
         }
     }
 }

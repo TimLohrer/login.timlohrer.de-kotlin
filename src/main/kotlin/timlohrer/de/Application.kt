@@ -46,12 +46,17 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
                 }
                 post("/{id}/2fa/get") {
                     val user: Account = isSignedIn(call, mongoManager) ?: return@post;
-                    verifiedPassword(call, mongoManager);
+                    verifiedTwoFactorAuth(call, mongoManager);
                     Accounts().GetTwoFactorAuth(call, mongoManager, user);
                 }
                 post("/{id}/2fa") {
                     val user: Account = isSignedIn(call, mongoManager) ?: return@post;
-                    verifiedTwoFactorAuth(call, mongoManager);
+                    if (user.twoFactorAuth) {
+                        verifiedTwoFactorAuth(call, mongoManager);
+                    } else {
+                        verifiedPassword(call, mongoManager);
+                    }
+                    Accounts().TwoFactorAuth(call, mongoManager, user);
                 }
                 delete("/{id}/delete") {
 
