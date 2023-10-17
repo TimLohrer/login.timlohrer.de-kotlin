@@ -16,29 +16,29 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.*
 
-@Serializable
-data class CreateAccountRequest(
-    val firstName: String,
-    val lastName: String,
-    val email: String,
-    val password: String,
-    val registrationCode: String = ""
-);
-
-@Serializable
-data class AccountResponse(
-    var id: String = "",
-    var firstName: String = "",
-    var lastName: String = "",
-    var email: String = "",
-    var twoFactorAuth: Boolean = false,
-    var createdAt: Long = 0,
-    var lastLogin: Long = 0,
-    var roles: List<String> = emptyList(),
-    var disabled: Boolean = false
-)
-
 class Accounts {
+    @Serializable
+    data class CreateAccountRequest(
+        val firstName: String,
+        val lastName: String,
+        val email: String,
+        val password: String,
+        val registrationCode: String = ""
+    );
+
+    @Serializable
+    data class AccountResponse(
+        var id: String = "",
+        var firstName: String = "",
+        var lastName: String = "",
+        var email: String = "",
+        var twoFactorAuth: Boolean = false,
+        var createdAt: Long = 0,
+        var lastLogin: Long = 0,
+        var roles: List<String> = emptyList(),
+        var disabled: Boolean = false
+    )
+
     suspend fun Create(call: ApplicationCall, mongoManager: MongoManager) {
         try {
             val body: CreateAccountRequest = call.receive<CreateAccountRequest>();
@@ -106,6 +106,40 @@ class Accounts {
                     );
 
             call.respond(HttpStatusCode.OK, account);
+        } catch (e: Exception) {
+            println(e);
+            return internalServerError(call, "Error getting account.");
+        }
+    }
+
+    @Serializable
+    data class GetTwoFactorAuthResponse(
+        val enabled: Boolean,
+        val key: String,
+        val qrCode: String
+    )
+
+    suspend fun GetTwoFactorAuth(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+        try {
+            val id: String = call.parameters["id"] ?: "";
+
+            PermissionHandler().checkIfRequestUserOwnsResource(call, user, id);
+
+            val userDB = mongoManager.getCollection("users");
+
+            val account: Account =
+                userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
+                    call, "Account does not exist!"
+                );
+
+            call.respond(
+                HttpStatusCode.OK,
+                GetTwoFactorAuthResponse(
+                    account.twoFactorAuth,
+                    account.twoFactorAuthKey,
+                    TwoFactorAuthManager().generateQrCode(account.email, account.twoFactorAuthKey)
+                )
+            );
         } catch (e: Exception) {
             println(e);
             return internalServerError(call, "Error getting account.");
