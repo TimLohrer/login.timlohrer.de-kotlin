@@ -38,6 +38,6 @@ class TwoFactorAuthManager {
     }
 
     fun validateTOTP(secretKey: String, userProvidedCode: String): Boolean {
-        return GoogleAuthenticator(secretKey).isValid(userProvidedCode);
+        return GoogleAuthenticator(secretKey.toByteArray()).isValid(userProvidedCode);
     }
 }
