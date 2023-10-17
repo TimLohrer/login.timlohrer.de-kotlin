@@ -6,10 +6,7 @@ import io.ktor.server.application.*
 import io.ktor.server.response.*
 import timlohrer.de.database.MongoManager
 import timlohrer.de.models.Account
-import timlohrer.de.utils.JWTManager
-import timlohrer.de.utils.badRequestError
-import timlohrer.de.utils.toDataClass
-import timlohrer.de.utils.unauthorizedError
+import timlohrer.de.utils.*
 
 suspend fun isSignedIn(call: ApplicationCall, mongoManager: MongoManager): Account? {
     var accessToken: String? = null;
@@ -22,7 +19,6 @@ suspend fun isSignedIn(call: ApplicationCall, mongoManager: MongoManager): Accou
         call.respondRedirect("/signIn", true);
         return null;
     }
-
 
     try {
         val jwtManager: JWTManager = JWTManager();
@@ -44,7 +40,7 @@ suspend fun isSignedIn(call: ApplicationCall, mongoManager: MongoManager): Accou
         return user;
     } catch (e: Exception) {
         println(e);
-        badRequestError(call, "Failed to verify token!");
+        internalServerError(call, "Failed to verify token!");
         return null;
     }
 }

@@ -9,6 +9,8 @@ import io.ktor.server.routing.*
 import timlohrer.de.config.Config
 import timlohrer.de.database.MongoManager
 import timlohrer.de.middleware.isSignedIn
+import timlohrer.de.middleware.verifiedPassword
+import timlohrer.de.middleware.verifiedTwoFactorAuth
 import timlohrer.de.models.Account
 import timlohrer.de.routes.Accounts
 import timlohrer.de.routes.Auth
@@ -43,10 +45,13 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
                     Accounts().Get(call, mongoManager, user);
                 }
                 post("/{id}/2fa/get") {
-
+                    val user: Account = isSignedIn(call, mongoManager) ?: return@post;
+                    verifiedPassword(call, mongoManager);
+                    Accounts().GetTwoFactorAuth(call, mongoManager, user);
                 }
                 post("/{id}/2fa") {
-
+                    val user: Account = isSignedIn(call, mongoManager) ?: return@post;
+                    verifiedTwoFactorAuth(call, mongoManager);
                 }
                 delete("/{id}/delete") {
 
