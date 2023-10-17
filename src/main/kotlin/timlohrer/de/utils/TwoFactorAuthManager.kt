@@ -1,8 +1,12 @@
 package timlohrer.de.utils
 
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.MultiFormatWriter
+import com.google.zxing.client.j2se.MatrixToImageWriter
+import com.google.zxing.common.BitMatrix
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.security.Key
-import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.*
 import javax.crypto.Mac
@@ -17,6 +21,22 @@ class TwoFactorAuthManager {
         val secretKey = ByteArray(20);
         random.nextBytes(secretKey);
         return secretKey.toString();
+    }
+
+    fun generateQrCode(email: String, secretKey: String): String {
+        val matrix: BitMatrix = MultiFormatWriter().encode(
+            "otpauth://totp/TimLohrer:$email?secret=$secretKey",
+            BarcodeFormat.QR_CODE,
+            256,
+            256
+        );
+
+        val outputStream = ByteArrayOutputStream();
+        MatrixToImageWriter.writeToStream(matrix, "PNG", outputStream);
+        val imageBytes: ByteArray = outputStream.toByteArray();
+        val base64Image: String = Base64.getEncoder().encodeToString(imageBytes);
+
+        return "data:image/png;base64,$base64Image";
     }
 
     fun generateTOTP(secretKey: String): String {
