@@ -24,8 +24,60 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
     mongoManager.connect(config);
     routing {
         route("/api") {
-            post("/accounts") {
-                Accounts().Create(call, mongoManager);
+            route("/accounts") {
+                put("/create") {
+                    Accounts().Create(call, mongoManager);
+                }
+                post("/signIn") {
+
+                }
+                get("/{id}") {
+
+                }
+                get("/") {
+
+                }
+                delete("/delete") {
+
+                }
+            }
+
+            route("/admin") {
+                route("/accounts") {
+                    post("/{id}/roles/add") {
+
+                    }
+                    post("/{id}/roles/remove") {
+
+                    }
+                }
+
+                route("/roles") {
+                    put("/create") {
+
+                    }
+                    get("/{id}") {
+
+                    }
+                    get("") {
+
+                    }
+                    delete("delete") {
+
+                    }
+                }
+
+                route("/registration-codes") {
+                    put("/create") {
+
+                    }
+                    get("/") {
+
+                    }
+                    delete("/delete") {
+
+                    }
+                }
             }
         }
     }
