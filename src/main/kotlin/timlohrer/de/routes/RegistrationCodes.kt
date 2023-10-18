@@ -22,9 +22,9 @@ class RegistrationCodes {
         try {
             val registrationCodesDB = mongoManager.getCollection("registrationCodes");
 
-            val registrationCode = RegistrationCode(
-                Random.nextInt(100, 1000).toString() + "-" + Random.nextInt(100, 1000).toString()
-            );
+            val code: String = Random.nextInt(100, 1000).toString() + "-" + Random.nextInt(100, 1000).toString();
+
+            val registrationCode = RegistrationCode(code);
 
             registrationCodesDB.insertOne(registrationCode.toDocument());
 
@@ -75,7 +75,7 @@ class RegistrationCodes {
 
             val registrationCodes: MutableList<String> = mutableListOf();
             registrationCodesDB.find().toList().forEach { registrationCode: Document ->
-                registrationCodes.add(registrationCode.toDataClass<RegistrationCode>().code);
+                registrationCodes.add(registrationCode.toDataClass<RegistrationCode>(excludeFields = setOf("_id")).code);
             }
 
             return call.respond(
