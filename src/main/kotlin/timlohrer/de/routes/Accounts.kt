@@ -11,7 +11,6 @@ import org.bson.Document
 import org.mindrot.jbcrypt.BCrypt
 import timlohrer.de.database.MongoManager
 import timlohrer.de.models.Account
-import timlohrer.de.models.Role
 import timlohrer.de.utils.*
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -119,16 +118,14 @@ class Accounts {
         val users: List<AccountResponse>
     );
 
-    suspend fun GetAll(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+    suspend fun GetAll(call: ApplicationCall, mongoManager: MongoManager) {
         try {
             val userDB = mongoManager.getCollection("users");
 
-            val documents: List<Document> = userDB.find().toList();
-
-            var accounts: MutableList<AccountResponse> = mutableListOf();
-            for (document in documents) {
-                accounts.add(document.toDataClass(fieldMappings = mapOf("id" to "_id")));
-            }
+            val accounts: MutableList<AccountResponse> = mutableListOf();
+            userDB.find().toList().forEach { account: Document ->
+                accounts.add(account.toDataClass(fieldMappings = mapOf("id" to "_id")));
+            };
 
             call.respond(HttpStatusCode.OK, GetAllAccountsResponse(accounts.size, accounts));
         } catch (e: Exception) {
@@ -219,7 +216,7 @@ class Accounts {
         val id: String = ""
     );
 
-    suspend fun AddRole(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+    suspend fun AddRole(call: ApplicationCall, mongoManager: MongoManager) {
         try {
             val body: AddRoleRequest = call.receive<AddRoleRequest>();
 
@@ -230,7 +227,7 @@ class Accounts {
             val id: String = call.parameters["id"] ?: "";
 
             val userDB = mongoManager.getCollection("users");
-            val adminDB = mongoManager.getCollection("admin");
+            val roleDB = mongoManager.getCollection("roles");
 
             val account: Account =
                 userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
@@ -241,14 +238,8 @@ class Accounts {
                 return badRequestError(call, "Account already has that role!");
             }
 
-            val roles: RolesDocument =
-                adminDB.find(Filters.eq("_id", "00000000-0000-0000-0000-000000000002")).first()
-                    ?.toDataClass<RolesDocument>()
-                    ?: return internalServerError(call, "Failed to fetch roles.");
-
-            if (!roles.roles.any { it.toDataClass<Role>().id == body.id }) {
-                return badRequestError(call, "Role does not exist!");
-            }
+            roleDB.find(Filters.eq("_id", body.id)).first()
+                ?: return internalServerError(call, "Role does not exist.");
 
             userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.push("roles", body.id));
 
@@ -264,7 +255,7 @@ class Accounts {
         val id: String = ""
     );
 
-    suspend fun RemoveRole(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+    suspend fun RemoveRole(call: ApplicationCall, mongoManager: MongoManager) {
         try {
             val body: RemoveRoleRequest = call.receive<RemoveRoleRequest>();
 
@@ -275,7 +266,7 @@ class Accounts {
             val id: String = call.parameters["id"] ?: "";
 
             val userDB = mongoManager.getCollection("users");
-            val adminDB = mongoManager.getCollection("admin");
+            val roleDB = mongoManager.getCollection("roles");
 
             val account: Account =
                 userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
@@ -286,14 +277,8 @@ class Accounts {
                 return badRequestError(call, "Account does not have that role!");
             }
 
-            val roles: RolesDocument =
-                adminDB.find(Filters.eq("_id", "00000000-0000-0000-0000-000000000002")).first()
-                    ?.toDataClass<RolesDocument>()
-                    ?: return internalServerError(call, "Failed to fetch roles.");
-
-            if (!roles.roles.any { it.toDataClass<Role>().id == body.id }) {
-                return badRequestError(call, "Role does not exist!");
-            }
+            roleDB.find(Filters.eq("_id", body.id)).first()
+                ?: return internalServerError(call, "Role does not exist.");
 
             userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.pull("roles", body.id));
 
@@ -323,7 +308,7 @@ class Accounts {
 
             userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.set("disabled", !account.disabled));
 
-            var returnValue: String = "Disabled!";
+            var returnValue = "Disabled!";
             if (account.disabled) {
                 returnValue = "Enabled!";
             }
@@ -342,10 +327,9 @@ class Accounts {
 
             val userDB = mongoManager.getCollection("users");
 
-            val account: Account =
-                userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
-                    call, "Account does not exist!"
-                );
+            userDB.find(Filters.eq("_id", id)).first() ?: return badRequestError(
+                call, "Account does not exist!"
+            );
 
             userDB.findOneAndDelete(Filters.eq("_id", id));
 

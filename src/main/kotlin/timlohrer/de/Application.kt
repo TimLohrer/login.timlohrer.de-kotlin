@@ -14,11 +14,13 @@ import timlohrer.de.middleware.verifiedTwoFactorAuth
 import timlohrer.de.models.Account
 import timlohrer.de.routes.Accounts
 import timlohrer.de.routes.Auth
+import timlohrer.de.routes.Roles
+import timlohrer.de.utils.PermissionHandler
 
 val mongoManager: MongoManager = MongoManager();
 
 fun main() {
-    val config: Config = Config();
+    val config = Config();
     embeddedServer(Netty, port = config.port, host = "0.0.0.0") {
         install(ContentNegotiation) {
             json()
@@ -68,34 +70,47 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
                 }
             }
 
+            route("/roles") {
+                get("/{id}") {
+                    isSignedIn(call, mongoManager) ?: return@get;
+                    Roles().Get(call, mongoManager);
+                }
+            }
+
             route("/admin") {
                 route("/accounts") {
                     get("/") {
                         val user: Account = isSignedIn(call, mongoManager) ?: return@get;
-                        Accounts().GetAll(call, mongoManager, user);
+                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                        Accounts().GetAll(call, mongoManager);
                     }
                     post("/{id}/roles/add") {
                         val user: Account = isSignedIn(call, mongoManager) ?: return@post;
-                        Accounts().AddRole(call, mongoManager, user);
+                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                        Accounts().AddRole(call, mongoManager);
                     }
                     post("/{id}/roles/remove") {
                         val user: Account = isSignedIn(call, mongoManager) ?: return@post;
-                        Accounts().RemoveRole(call, mongoManager, user);
+                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                        Accounts().RemoveRole(call, mongoManager);
                     }
                 }
 
                 route("/roles") {
                     put("/create") {
-
+                        val user: Account = isSignedIn(call, mongoManager) ?: return@put;
+                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                        Roles().Create(call, mongoManager);
                     }
-                    get("/{id}") {
-
+                    get("/") {
+                        val user: Account = isSignedIn(call, mongoManager) ?: return@get;
+                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                        Roles().GetAll(call, mongoManager);
                     }
-                    get("") {
-
-                    }
-                    delete("delete") {
-
+                    delete("/delete") {
+                        val user: Account = isSignedIn(call, mongoManager) ?: return@delete;
+                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                        Roles().Delete(call, mongoManager);
                     }
                 }
 
