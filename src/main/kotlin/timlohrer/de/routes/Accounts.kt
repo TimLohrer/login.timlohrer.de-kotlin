@@ -11,6 +11,7 @@ import org.bson.Document
 import org.mindrot.jbcrypt.BCrypt
 import timlohrer.de.database.MongoManager
 import timlohrer.de.models.Account
+import timlohrer.de.models.Role
 import timlohrer.de.utils.*
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -113,40 +114,28 @@ class Accounts {
     }
 
     @Serializable
-    data class GetTwoFactorAuthResponse(
-        val enabled: Boolean,
-        val key: String,
-        val qrCode: String
-    )
+    data class GetAllAccountsResponse(
+        val count: Int,
+        val users: List<AccountResponse>
+    );
 
-    suspend fun GetTwoFactorAuth(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+    suspend fun GetAll(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
         try {
-            val id: String = call.parameters["id"] ?: "";
-
-            PermissionHandler().checkIfRequestUserOwnsResource(call, user, id);
+            PermissionHandler().checkIfRequestUserIdAdmin(call, user);
 
             val userDB = mongoManager.getCollection("users");
 
-            val account: Account =
-                userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
-                    call, "Account does not exist!"
-                );
+            val documents: List<Document> = userDB.find().toList();
 
-            if (!account.twoFactorAuth) {
-                return badRequestError(call, "2fa is not enabled on this account!");
+            var accounts: MutableList<AccountResponse> = mutableListOf();
+            for (document in documents) {
+                accounts.add(document.toDataClass(fieldMappings = mapOf("id" to "_id")));
             }
 
-            call.respond(
-                HttpStatusCode.OK,
-                GetTwoFactorAuthResponse(
-                    account.twoFactorAuth,
-                    account.twoFactorAuthKey,
-                    TwoFactorAuthManager().generateQrCode(account.email, account.twoFactorAuthKey)
-                )
-            );
+            call.respond(HttpStatusCode.OK, GetAllAccountsResponse(accounts.size, accounts));
         } catch (e: Exception) {
             println(e);
-            return internalServerError(call, "Error setting up 2fa.");
+            return internalServerError(call, "Error getting all accounts.");
         }
     }
 
@@ -186,6 +175,192 @@ class Accounts {
         } catch (e: Exception) {
             println(e);
             return internalServerError(call, "Error managing 2fa settings.");
+        }
+    }
+
+    @Serializable
+    data class GetTwoFactorAuthResponse(
+        val enabled: Boolean,
+        val key: String,
+        val qrCode: String
+    )
+
+    suspend fun GetTwoFactorAuth(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+        try {
+            val id: String = call.parameters["id"] ?: "";
+
+            PermissionHandler().checkIfRequestUserOwnsResource(call, user, id);
+
+            val userDB = mongoManager.getCollection("users");
+
+            val account: Account =
+                userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
+                    call, "Account does not exist!"
+                );
+
+            if (!account.twoFactorAuth) {
+                return badRequestError(call, "2fa is not enabled on this account!");
+            }
+
+            call.respond(
+                HttpStatusCode.OK,
+                GetTwoFactorAuthResponse(
+                    account.twoFactorAuth,
+                    account.twoFactorAuthKey,
+                    TwoFactorAuthManager().generateQrCode(account.email, account.twoFactorAuthKey)
+                )
+            );
+        } catch (e: Exception) {
+            println(e);
+            return internalServerError(call, "Error setting up 2fa.");
+        }
+    }
+
+    data class Roles(
+        val roles: List<Document> = listOf()
+    );
+
+    @Serializable
+    data class AddRoleRequest(
+        val id: String = ""
+    );
+
+    suspend fun AddRole(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+        try {
+            val body: AddRoleRequest = call.receive<AddRoleRequest>();
+
+            if (body.id.isEmpty()) {
+                return badRequestError(call, "Missing required field: id");
+            }
+
+            val id: String = call.parameters["id"] ?: "";
+
+            PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+
+            val userDB = mongoManager.getCollection("users");
+            val adminDB = mongoManager.getCollection("admin");
+
+            val account: Account =
+                userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
+                    call, "Account does not exist!"
+                );
+
+            if (account.roles.contains(body.id)) {
+                return badRequestError(call, "Account already has that role!");
+            }
+
+            val roles: Roles =
+                adminDB.find(Filters.eq("_id", "00000000-0000-0000-0000-000000000002")).first()?.toDataClass<Roles>()
+                    ?: return internalServerError(call, "Failed to fetch role.");
+
+            if (!roles.roles.any { it.toDataClass<Role>().id == body.id }) {
+                return badRequestError(call, "Role does not exist!");
+            }
+
+            userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.push("roles", body.id));
+
+            call.respond(HttpStatusCode.OK, MessageResponse("Role added!"));
+        } catch (e: Exception) {
+            println(e);
+            return internalServerError(call, "Error adding role to account.");
+        }
+    }
+
+    @Serializable
+    data class RemoveRoleRequest(
+        val id: String = ""
+    );
+
+    suspend fun RemoveRole(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+        try {
+            val body: RemoveRoleRequest = call.receive<RemoveRoleRequest>();
+
+            if (body.id.isEmpty()) {
+                return badRequestError(call, "Missing required field: id");
+            }
+
+            val id: String = call.parameters["id"] ?: "";
+
+            PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+
+            val userDB = mongoManager.getCollection("users");
+            val adminDB = mongoManager.getCollection("admin");
+
+            val account: Account =
+                userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
+                    call, "Account does not exist!"
+                );
+
+            if (!account.roles.contains(body.id)) {
+                return badRequestError(call, "Account does not have that role!");
+            }
+
+            val roles: Roles =
+                adminDB.find(Filters.eq("_id", "00000000-0000-0000-0000-000000000002")).first()?.toDataClass<Roles>()
+                    ?: return internalServerError(call, "Failed to fetch role.");
+
+            if (!roles.roles.any { it.toDataClass<Role>().id == body.id }) {
+                return badRequestError(call, "Role does not exist!");
+            }
+
+            userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.pull("roles", body.id));
+
+            call.respond(HttpStatusCode.OK, MessageResponse("Role removed!"));
+        } catch (e: Exception) {
+            println(e);
+            return internalServerError(call, "Error removing role from account.");
+        }
+    }
+
+    suspend fun Disable(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+        try {
+            val id: String = call.parameters["id"] ?: "";
+
+            if (user.disabled) {
+                PermissionHandler().checkIfRequestUserIdAdmin(call, user, "Only Admins can enable accounts!");
+            } else {
+                PermissionHandler().checkIfRequestUserOwnsResource(call, user, id);
+            }
+
+            val userDB = mongoManager.getCollection("users");
+
+            val account: Account =
+                userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
+                    call, "Account does not exist!"
+                );
+
+            userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.set("disabled", !account.disabled));
+
+            var returnValue: String = "Disabled!";
+            if (account.disabled) {
+                returnValue = "Enabled!";
+            }
+            return call.respond(HttpStatusCode.OK, MessageResponse(returnValue));
+        } catch (e: Exception) {
+            println(e);
+            return internalServerError(call, "Error toggeling disable for this account.");
+        }
+    }
+
+    suspend fun Delete(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
+        try {
+            val id: String = call.parameters["id"] ?: "";
+
+            PermissionHandler().checkIfRequestUserOwnsResource(call, user, id);
+
+            val userDB = mongoManager.getCollection("users");
+
+            val account: Account =
+                userDB.find(Filters.eq("_id", id)).first()?.toDataClass() ?: return badRequestError(
+                    call, "Account does not exist!"
+                );
+
+            userDB.findOneAndDelete(Filters.eq("_id", id));
+
+            return call.respond(HttpStatusCode.OK, MessageResponse("Deleted!"));
+        } catch (e: Exception) {
+            println(e);
+            return internalServerError(call, "Error deleting account.");
         }
     }
 }

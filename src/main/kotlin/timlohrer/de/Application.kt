@@ -58,18 +58,29 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
                     }
                     Accounts().TwoFactorAuth(call, mongoManager, user);
                 }
+                post("/{id}/disable") {
+                    val user: Account = isSignedIn(call, mongoManager) ?: return@post;
+                    Accounts().Disable(call, mongoManager, user);
+                }
                 delete("/{id}/delete") {
-
+                    val user: Account = isSignedIn(call, mongoManager) ?: return@delete;
+                    Accounts().Delete(call, mongoManager, user);
                 }
             }
 
             route("/admin") {
                 route("/accounts") {
+                    get("/") {
+                        val user: Account = isSignedIn(call, mongoManager) ?: return@get;
+                        Accounts().GetAll(call, mongoManager, user);
+                    }
                     post("/{id}/roles/add") {
-
+                        val user: Account = isSignedIn(call, mongoManager) ?: return@post;
+                        Accounts().AddRole(call, mongoManager, user);
                     }
                     post("/{id}/roles/remove") {
-
+                        val user: Account = isSignedIn(call, mongoManager) ?: return@post;
+                        Accounts().RemoveRole(call, mongoManager, user);
                     }
                 }
 
