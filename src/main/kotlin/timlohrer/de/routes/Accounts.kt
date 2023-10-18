@@ -159,7 +159,7 @@ class Accounts {
                     )
                 );
             } else {
-                userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.set("twoFactorAuth", true));
+                userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.set("twoFactorAuth", false));
                 userDB.findOneAndUpdate(
                     Filters.eq("_id", id),
                     Updates.set("twoFactorAuthKey", TwoFactorAuthManager().generateSecretKey())
