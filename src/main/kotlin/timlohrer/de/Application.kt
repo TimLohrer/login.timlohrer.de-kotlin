@@ -6,6 +6,7 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import timlohrer.de.config.Config
@@ -14,10 +15,7 @@ import timlohrer.de.middleware.isSignedIn
 import timlohrer.de.middleware.verifiedPassword
 import timlohrer.de.middleware.verifiedTwoFactorAuth
 import timlohrer.de.models.Account
-import timlohrer.de.routes.Accounts
-import timlohrer.de.routes.Auth
-import timlohrer.de.routes.RegistrationCodes
-import timlohrer.de.routes.Roles
+import timlohrer.de.routes.*
 import timlohrer.de.utils.MessageResponse
 import timlohrer.de.utils.PermissionHandler
 
@@ -26,6 +24,17 @@ val mongoManager: MongoManager = MongoManager();
 fun main() {
     val config = Config();
     embeddedServer(Netty, port = config.port, host = "0.0.0.0") {
+        install(CORS) {
+            allowHost("timlohrer.de", listOf("https", "http"), listOf("login"))
+            allowHeader("authorization")
+            allowHeader("content-type");
+            allowMethod(HttpMethod.Get)
+            allowMethod(HttpMethod.Put)
+            allowMethod(HttpMethod.Post)
+            allowMethod(HttpMethod.Delete)
+            allowMethod(HttpMethod.Options)
+            allowCredentials = true;
+        }
         install(ContentNegotiation) {
             json()
         }
@@ -83,26 +92,22 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
                 }
             }
 
-            route("/roles") {
-                get("/{id}") {
-                    isSignedIn(call, mongoManager) ?: return@get;
-                    Roles().Get(call, mongoManager);
-                }
+            get("/roles/{id}") {
+                isSignedIn(call, mongoManager) ?: return@get;
+                Roles().Get(call, mongoManager);
             }
 
-            route("/registration-codes") {
-                get("/validate") {
-                    RegistrationCodes().Validate(call, mongoManager);
-                }
+            get("/registration-codes/validate") {
+                RegistrationCodes().Validate(call, mongoManager);
             }
 
             route("/admin") {
+                get("/accounts") {
+                    val user: Account = isSignedIn(call, mongoManager) ?: return@get;
+                    PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                    Accounts().GetAll(call, mongoManager);
+                }
                 route("/accounts") {
-                    get("/") {
-                        val user: Account = isSignedIn(call, mongoManager) ?: return@get;
-                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
-                        Accounts().GetAll(call, mongoManager);
-                    }
                     post("/{id}/roles/add") {
                         val user: Account = isSignedIn(call, mongoManager) ?: return@post;
                         PermissionHandler().checkIfRequestUserIdAdmin(call, user);
@@ -115,16 +120,16 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
                     }
                 }
 
+                get("/roles") {
+                    val user: Account = isSignedIn(call, mongoManager) ?: return@get;
+                    PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                    Roles().GetAll(call, mongoManager);
+                }
                 route("/roles") {
                     put("/create") {
                         val user: Account = isSignedIn(call, mongoManager) ?: return@put;
                         PermissionHandler().checkIfRequestUserIdAdmin(call, user);
                         Roles().Create(call, mongoManager);
-                    }
-                    get("/") {
-                        val user: Account = isSignedIn(call, mongoManager) ?: return@get;
-                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
-                        Roles().GetAll(call, mongoManager);
                     }
                     delete("/delete") {
                         val user: Account = isSignedIn(call, mongoManager) ?: return@delete;
@@ -133,21 +138,34 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
                     }
                 }
 
+                get("/registration-codes") {
+                    val user: Account = isSignedIn(call, mongoManager) ?: return@get;
+                    PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                    RegistrationCodes().GetAll(call, mongoManager);
+                }
                 route("/registration-codes") {
                     put("/create") {
                         val user: Account = isSignedIn(call, mongoManager) ?: return@put;
                         PermissionHandler().checkIfRequestUserIdAdmin(call, user);
                         RegistrationCodes().Create(call, mongoManager);
                     }
-                    get("/") {
-                        val user: Account = isSignedIn(call, mongoManager) ?: return@get;
-                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
-                        RegistrationCodes().GetAll(call, mongoManager);
-                    }
                     delete("/delete") {
                         val user: Account = isSignedIn(call, mongoManager) ?: return@delete;
                         PermissionHandler().checkIfRequestUserIdAdmin(call, user);
                         RegistrationCodes().Delete(call, mongoManager);
+                    }
+                }
+
+                get("/settings") {
+                    val user: Account = isSignedIn(call, mongoManager) ?: return@get;
+                    PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                    Settings().Get(call, mongoManager);
+                }
+                route("/settings") {
+                    put("/update") {
+                        val user: Account = isSignedIn(call, mongoManager) ?: return@put;
+                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                        Settings().Update(call, mongoManager);
                     }
                 }
             }
