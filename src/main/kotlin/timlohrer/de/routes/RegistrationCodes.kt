@@ -24,13 +24,11 @@ class RegistrationCodes {
 
             val code: String = Random.nextInt(100, 1000).toString() + "-" + Random.nextInt(100, 1000).toString();
 
-            val registrationCode = RegistrationCode(code);
-
-            registrationCodesDB.insertOne(registrationCode.toDocument());
+            registrationCodesDB.insertOne(RegistrationCode(code).toDocument());
 
             return call.respond(
                 HttpStatusCode.Created,
-                CreateRegistrationCodeResponse("Created!", registrationCode.code)
+                CreateRegistrationCodeResponse("Created!", code)
             );
         } catch (e: Exception) {
             println(e);
