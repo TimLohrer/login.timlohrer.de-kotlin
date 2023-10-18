@@ -1,1 +1,1 @@
-rootProject.name = "timlohrer.de.login-test"
+rootProject.name = "timlohrer.de.login"
