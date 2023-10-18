@@ -19,9 +19,13 @@ class PermissionHandler {
         }
     }
 
-    suspend fun checkIfRequestUserIdAdmin(call: ApplicationCall, user: Account) {
+    suspend fun checkIfRequestUserIdAdmin(
+        call: ApplicationCall,
+        user: Account,
+        errorMessage: String = "Missing permissions to access this endpoint!"
+    ) {
         if (!user.roles.contains(SystemRoles().ADMIN)) {
-            return unauthorizedError(call, "Missing permissions to access this endpoint!");
+            return unauthorizedError(call, errorMessage);
         }
     }
 }
