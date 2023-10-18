@@ -121,8 +121,6 @@ class Accounts {
 
     suspend fun GetAll(call: ApplicationCall, mongoManager: MongoManager, user: Account) {
         try {
-            PermissionHandler().checkIfRequestUserIdAdmin(call, user);
-
             val userDB = mongoManager.getCollection("users");
 
             val documents: List<Document> = userDB.find().toList();
@@ -216,10 +214,6 @@ class Accounts {
         }
     }
 
-    data class Roles(
-        val roles: List<Document> = listOf()
-    );
-
     @Serializable
     data class AddRoleRequest(
         val id: String = ""
@@ -235,8 +229,6 @@ class Accounts {
 
             val id: String = call.parameters["id"] ?: "";
 
-            PermissionHandler().checkIfRequestUserIdAdmin(call, user);
-
             val userDB = mongoManager.getCollection("users");
             val adminDB = mongoManager.getCollection("admin");
 
@@ -249,9 +241,10 @@ class Accounts {
                 return badRequestError(call, "Account already has that role!");
             }
 
-            val roles: Roles =
-                adminDB.find(Filters.eq("_id", "00000000-0000-0000-0000-000000000002")).first()?.toDataClass<Roles>()
-                    ?: return internalServerError(call, "Failed to fetch role.");
+            val roles: RolesDocument =
+                adminDB.find(Filters.eq("_id", "00000000-0000-0000-0000-000000000002")).first()
+                    ?.toDataClass<RolesDocument>()
+                    ?: return internalServerError(call, "Failed to fetch roles.");
 
             if (!roles.roles.any { it.toDataClass<Role>().id == body.id }) {
                 return badRequestError(call, "Role does not exist!");
@@ -281,8 +274,6 @@ class Accounts {
 
             val id: String = call.parameters["id"] ?: "";
 
-            PermissionHandler().checkIfRequestUserIdAdmin(call, user);
-
             val userDB = mongoManager.getCollection("users");
             val adminDB = mongoManager.getCollection("admin");
 
@@ -295,9 +286,10 @@ class Accounts {
                 return badRequestError(call, "Account does not have that role!");
             }
 
-            val roles: Roles =
-                adminDB.find(Filters.eq("_id", "00000000-0000-0000-0000-000000000002")).first()?.toDataClass<Roles>()
-                    ?: return internalServerError(call, "Failed to fetch role.");
+            val roles: RolesDocument =
+                adminDB.find(Filters.eq("_id", "00000000-0000-0000-0000-000000000002")).first()
+                    ?.toDataClass<RolesDocument>()
+                    ?: return internalServerError(call, "Failed to fetch roles.");
 
             if (!roles.roles.any { it.toDataClass<Role>().id == body.id }) {
                 return badRequestError(call, "Role does not exist!");
