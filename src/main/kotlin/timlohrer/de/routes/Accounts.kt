@@ -213,14 +213,14 @@ class Accounts {
 
     @Serializable
     data class AddRoleRequest(
-        val id: String = ""
+        val role: String = ""
     );
 
     suspend fun AddRole(call: ApplicationCall, mongoManager: MongoManager) {
         try {
             val body: AddRoleRequest = call.receive<AddRoleRequest>();
 
-            if (body.id.isEmpty()) {
+            if (body.role.isEmpty()) {
                 return badRequestError(call, "Missing required field: id");
             }
 
@@ -234,14 +234,14 @@ class Accounts {
                     call, "Account does not exist!"
                 );
 
-            if (account.roles.contains(body.id)) {
+            if (account.roles.contains(body.role)) {
                 return badRequestError(call, "Account already has that role!");
             }
 
-            roleDB.find(Filters.eq("_id", body.id)).first()
+            roleDB.find(Filters.eq("_id", body.role)).first()
                 ?: return internalServerError(call, "Role does not exist.");
 
-            userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.push("roles", body.id));
+            userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.push("roles", body.role));
 
             call.respond(HttpStatusCode.OK, MessageResponse("Role added!"));
         } catch (e: Exception) {
@@ -252,14 +252,14 @@ class Accounts {
 
     @Serializable
     data class RemoveRoleRequest(
-        val id: String = ""
+        val role: String = ""
     );
 
     suspend fun RemoveRole(call: ApplicationCall, mongoManager: MongoManager) {
         try {
             val body: RemoveRoleRequest = call.receive<RemoveRoleRequest>();
 
-            if (body.id.isEmpty()) {
+            if (body.role.isEmpty()) {
                 return badRequestError(call, "Missing required field: id");
             }
 
@@ -273,14 +273,14 @@ class Accounts {
                     call, "Account does not exist!"
                 );
 
-            if (!account.roles.contains(body.id)) {
+            if (!account.roles.contains(body.role)) {
                 return badRequestError(call, "Account does not have that role!");
             }
 
-            roleDB.find(Filters.eq("_id", body.id)).first()
+            roleDB.find(Filters.eq("_id", body.role)).first()
                 ?: return internalServerError(call, "Role does not exist.");
 
-            userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.pull("roles", body.id));
+            userDB.findOneAndUpdate(Filters.eq("_id", id), Updates.pull("roles", body.role));
 
             call.respond(HttpStatusCode.OK, MessageResponse("Role removed!"));
         } catch (e: Exception) {
