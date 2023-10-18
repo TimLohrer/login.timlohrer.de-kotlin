@@ -19,10 +19,11 @@ import java.util.*
 class Accounts {
     @Serializable
     data class CreateAccountRequest(
-        val firstName: String,
-        val lastName: String,
-        val email: String,
-        val password: String,
+        val firstName: String = "",
+        val lastName: String = "",
+        val email: String = "",
+        val password: String = "",
+        val confirmPassword: String = "",
         val registrationCode: String = ""
     );
 
@@ -47,11 +48,24 @@ class Accounts {
                 return badRequestError(call, "Missing required fields");
             }
 
-            val adminDB = mongoManager.getCollection("admin");
             val userDB = mongoManager.getCollection("users");
+            val adminDB = mongoManager.getCollection("admin");
+            val registrationCodesDB = mongoManager.getCollection("registrationCodes");
 
             if (userDB.countDocuments(Filters.eq("email", body.email)) > 0) {
                 return badRequestError(call, "Account with that email already exists!");
+            }
+
+            if (body.password != body.confirmPassword) {
+                return badRequestError(call, "Passwords must match!");
+            }
+
+            val settings: Document =
+                adminDB.find(Filters.eq("_id", "00000000-0000-0000-0000-000000000000")).singleOrNull()
+                    ?: return internalServerError(call, "Failed to fetch openRegistration settings.");
+            if (settings.getBoolean("openRegistration") == false) {
+                registrationCodesDB.findOneAndDelete(Filters.eq("code", body.registrationCode))
+                    ?: return badRequestError(call, "Invalid registration code!");
             }
 
             val id: String = UUID.randomUUID().toString();
@@ -72,16 +86,6 @@ class Accounts {
             );
 
             userDB.insertOne(newAccount.toDocument());
-
-            val settings: Document =
-                adminDB.find(Filters.eq("_id", "00000000-0000-0000-0000-000000000000")).singleOrNull()
-                    ?: return internalServerError(call, "Database error.");
-            if (body.registrationCode.isNotEmpty() && (settings.getString("openRegistration") ?: false) == false) {
-                adminDB.findOneAndUpdate(
-                    Filters.eq("_id", "00000000-0000-0000-0000-000000000001"),
-                    Updates.pull("registrationCodes", body.registrationCode)
-                );
-            }
 
             call.respond(HttpStatusCode.Created, "Account created successfully!");
         } catch (e: Exception) {

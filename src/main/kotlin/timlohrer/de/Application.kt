@@ -97,7 +97,7 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
                 Roles().Get(call, mongoManager);
             }
 
-            get("/registration-codes/validate") {
+            post("/registration-codes/validate") {
                 RegistrationCodes().Validate(call, mongoManager);
             }
 
