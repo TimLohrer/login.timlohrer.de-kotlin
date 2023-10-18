@@ -14,6 +14,7 @@ import timlohrer.de.middleware.verifiedTwoFactorAuth
 import timlohrer.de.models.Account
 import timlohrer.de.routes.Accounts
 import timlohrer.de.routes.Auth
+import timlohrer.de.routes.RegistrationCodes
 import timlohrer.de.routes.Roles
 import timlohrer.de.utils.PermissionHandler
 
@@ -77,6 +78,12 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
                 }
             }
 
+            route("/registration-codes") {
+                get("/validate") {
+                    RegistrationCodes().Validate(call, mongoManager);
+                }
+            }
+
             route("/admin") {
                 route("/accounts") {
                     get("/") {
@@ -116,13 +123,19 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
 
                 route("/registration-codes") {
                     put("/create") {
-
+                        val user: Account = isSignedIn(call, mongoManager) ?: return@put;
+                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                        RegistrationCodes().Create(call, mongoManager);
                     }
                     get("/") {
-
+                        val user: Account = isSignedIn(call, mongoManager) ?: return@get;
+                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                        RegistrationCodes().GetAll(call, mongoManager);
                     }
                     delete("/delete") {
-
+                        val user: Account = isSignedIn(call, mongoManager) ?: return@delete;
+                        PermissionHandler().checkIfRequestUserIdAdmin(call, user);
+                        RegistrationCodes().Delete(call, mongoManager);
                     }
                 }
             }
