@@ -1,10 +1,12 @@
 package timlohrer.de
 
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import timlohrer.de.config.Config
 import timlohrer.de.database.MongoManager
@@ -16,6 +18,7 @@ import timlohrer.de.routes.Accounts
 import timlohrer.de.routes.Auth
 import timlohrer.de.routes.RegistrationCodes
 import timlohrer.de.routes.Roles
+import timlohrer.de.utils.MessageResponse
 import timlohrer.de.utils.PermissionHandler
 
 val mongoManager: MongoManager = MongoManager();
@@ -37,6 +40,15 @@ fun Application.router(config: Config, mongoManager: MongoManager) {
             route("/auth") {
                 post("/signin") {
                     Auth().signIn(call, mongoManager);
+                }
+                post("/2fa/validate") {
+                    val user: Account = isSignedIn(call, mongoManager) ?: return@post;
+                    verifiedTwoFactorAuth(call, mongoManager);
+                    Auth().validateTwoFactorAuth(call, mongoManager, user);
+                }
+                post("/validate") {
+                    isSignedIn(call, mongoManager) ?: return@post;
+                    return@post call.respond(HttpStatusCode.OK, MessageResponse("Valid!"));
                 }
             }
             route("/accounts") {
