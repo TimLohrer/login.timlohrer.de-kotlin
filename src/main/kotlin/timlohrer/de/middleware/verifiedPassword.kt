@@ -18,7 +18,8 @@ data class VerifiedPassword(
     val id: String = "",
     val email: String = "",
     val password: String = "",
-    val token: String = ""
+    val token: String = "",
+    val enabled: Boolean = false
 )
 
 suspend fun verifiedPassword(call: ApplicationCall, mongoManager: MongoManager) {

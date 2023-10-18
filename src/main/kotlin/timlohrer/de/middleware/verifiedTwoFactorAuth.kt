@@ -16,7 +16,8 @@ data class VerifiedTwoFactorAuth(
     val email: String = "",
     val password: String = "",
     val token: String = "",
-    val rememberMe: Boolean = false
+    val rememberMe: Boolean = false,
+    val enabled: Boolean = false
 )
 
 suspend fun verifiedTwoFactorAuth(call: ApplicationCall, mongoManager: MongoManager) {
