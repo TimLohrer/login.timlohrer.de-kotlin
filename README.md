@@ -1,4 +1,4 @@
-# Kotoin Backend for login.timlohrer.de
+# Kotlin Backend for login.timlohrer.de
 
 ### Setup
 
@@ -6,5 +6,5 @@ Enter your mongo uri and private jwt secret in the config class before building 
 
 ### Using Docker
 
-When using docker you still have to do the steps in Setup.
+When using docker you still have to do the steps in #Setup.
 Now build the Project and create the docker image using "docker build -t login-backend ."
