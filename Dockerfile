@@ -1,6 +1,8 @@
 FROM openjdk:11-jre-slim
 
 WORKDIR /app
-COPY build/libs/timlohrer.de.login-0.0.1.jar /app/
+COPY build/libs/timlohrer.de.login-all.jar /app/
 
-CMD ["java", "-jar", "timlohrer.de.login-0.0.1.jar"]
+EXPOSE 8080
+
+CMD ["java", "-jar", "timlohrer.de.login-all.jar"]
