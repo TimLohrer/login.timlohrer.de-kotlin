@@ -1,4 +1,4 @@
-FROM adoptopenjdk:17-jre-hotspot
+FROM openjdk:17-jdk-alpine
 
 WORKDIR /app
 COPY build/libs/timlohrer.de.login-0.0.1.jar /app/
