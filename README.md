@@ -1,12 +1,12 @@
 # Kotlin Backend for login.timlohrer.de
 
+Default Port is 8080.
+
 ### Setup
 
-Enter your mongo uri and private jwt secret in the config class before building the project.
+Enter your mongo uri and private jwt secret in the Config class before building the project with "./gradlew build".
 
 ### Using Docker
 
-**!! Docker is not supportet as of now !!**
-
-When using docker you still have to do the steps in #Setup.
-Now build the Project and create the docker image using "docker build -t login-backend ."
+When using Docker you still have to do the steps in #Setup.
+Now create the Docker image using "docker build -t login-backend ."
